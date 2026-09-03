@@ -337,24 +337,9 @@ function App() {
     if (!result) return;
     const qrUrl = `${location.origin}/api/qr?data=${encodeURIComponent(result.code)}&size=280`;
     const text = `QRIS ${result.data.merchantName} Rp ${Number(result.data.amount || 0).toLocaleString("id-ID")}\nCek di page: ${location.origin}`;
-    const attachImage = async () => {
-      // fetch SVG QR, rasterize to PNG via canvas so WhatsApp accepts it as an image
-      const svgText = await (await fetch(qrUrl)).text();
-      const img = new Image();
-      const url = URL.createObjectURL(new Blob([svgText], { type: "image/svg+xml" }));
-      await new Promise<void>((resolve, reject) => { img.onload = () => resolve(); img.onerror = () => reject(new Error("svg load failed")); img.src = url; });
-      const canvas = document.createElement("canvas");
-      const size = 560;
-      canvas.width = size; canvas.height = size;
-      const ctx = canvas.getContext("2d");
-      ctx?.drawImage(img, 0, 0, size, size);
-      URL.revokeObjectURL(url);
-      const png = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
-      return new File([png ?? new Blob()], "qris.png", { type: "image/png" });
-    };
+    const file = await qrToPngFile(result.code, "qris.png");
     try {
       // try sharing with image attached (WhatsApp/Android share sheets)
-      const file = await attachImage();
       const payload = { title: "QRIS Dinamis", text, files: [file] };
       if ((navigator as any).canShare?.(payload)) { await navigator.share(payload); return; }
     } catch { /* image share unsupported → fall back below */ }
@@ -363,6 +348,35 @@ function App() {
       await navigator.clipboard.writeText(text);
       alert("QRIS disalin ke clipboard.");
     } catch { /* cancel */ }
+  };
+
+  // fetch SVG QR from /api/qr, rasterize to PNG (white background) for share/download
+  const qrToPngFile = async (qrText: string, filename: string) => {
+    const res = await fetch(`/api/qr?data=${encodeURIComponent(qrText)}&size=560`);
+    const svg = await res.text();
+    const blobUrl = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }));
+    const img = new Image();
+    await new Promise<void>((resolve, reject) => { img.onload = () => resolve(); img.onerror = () => reject(new Error("QR load failed")); img.src = blobUrl; });
+    const canvas = document.createElement("canvas");
+    canvas.width = 560; canvas.height = 560;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("canvas unavailable");
+    ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, 560, 560);
+    ctx.drawImage(img, 0, 0, 560, 560);
+    URL.revokeObjectURL(blobUrl);
+    const png = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/png"));
+    if (!png) throw new Error("png encode failed");
+    return new File([png], filename, { type: "image/png" });
+  };
+
+  const downloadQrPng = async (qrText: string, filename: string) => {
+    try {
+      const file = await qrToPngFile(qrText, filename);
+      const url = URL.createObjectURL(file);
+      const a = document.createElement("a");
+      a.href = url; a.download = filename; a.click();
+      URL.revokeObjectURL(url);
+    } catch (error) { setErrors([error instanceof Error ? error.message : "Gagal unduh QR"]); }
   };
 
   const generateTraktir = () => {
@@ -453,7 +467,7 @@ function App() {
           {result.data.tipIndicator === "fixed" && result.data.tipFixed && <p className="mt-1 text-xs text-slate-400 dark:text-white/40">+ biaya Rp {Number(result.data.tipFixed).toLocaleString("id-ID")}</p>}
           {result.data.tipIndicator === "percentage" && result.data.tipPercentage && <p className="mt-1 text-xs text-slate-400 dark:text-white/40">+ biaya {result.data.tipPercentage}%</p>}
           <code className="mt-5 block max-h-28 overflow-auto rounded-xl bg-black/10 p-4 text-left font-mono text-xs leading-5 text-slate-600 dark:bg-black/20 dark:text-white/60">{result.code}</code>
-          <div className="mt-4 grid gap-2 print:hidden sm:grid-cols-2"><Button onClick={() => navigator.clipboard.writeText(result.code)} className="border-black/10 bg-white text-slate-700 hover:bg-black/5 dark:border-white/15 dark:bg-white/[.04] dark:text-white/80 dark:hover:bg-white/[.08]">Salin string</Button><Button onClick={share} className="border-black/10 bg-white text-slate-700 hover:bg-black/5 dark:border-white/15 dark:bg-white/[.04] dark:text-white/80 dark:hover:bg-white/[.08]">Bagikan QRIS</Button><Button asChild className="border-brand-600 bg-brand-600 text-white hover:bg-brand-700"><a download={`qris-dynamic-${result.data.merchantName.toLowerCase().replace(/\s+/g, "-")}.png`} href={`/api/qr?data=${encodeURIComponent(result.code)}&size=280`}>Unduh QR</a></Button><Button onClick={downloadPDF} className="border-black/10 bg-white text-slate-700 hover:bg-black/5 dark:border-white/15 dark:bg-white/[.04] dark:text-white/80 dark:hover:bg-white/[.08]">Export PDF</Button><Button onClick={() => window.print()} className="border-black/10 bg-white text-slate-700 hover:bg-black/5 dark:border-white/15 dark:bg-white/[.04] dark:text-white/80 dark:hover:bg-white/[.08]">Cetak</Button></div>
+          <div className="mt-4 grid gap-2 print:hidden sm:grid-cols-2"><Button onClick={() => navigator.clipboard.writeText(result.code)} className="border-black/10 bg-white text-slate-700 hover:bg-black/5 dark:border-white/15 dark:bg-white/[.04] dark:text-white/80 dark:hover:bg-white/[.08]">Salin string</Button><Button onClick={share} className="border-black/10 bg-white text-slate-700 hover:bg-black/5 dark:border-white/15 dark:bg-white/[.04] dark:text-white/80 dark:hover:bg-white/[.08]">Bagikan QRIS</Button><Button onClick={() => downloadQrPng(result.code, `qris-dynamic-${result.data.merchantName.toLowerCase().replace(/\s+/g, "-")}.png`)} className="border-brand-600 bg-brand-600 text-white hover:bg-brand-700">Unduh QR</Button><Button onClick={downloadPDF} className="border-black/10 bg-white text-slate-700 hover:bg-black/5 dark:border-white/15 dark:bg-white/[.04] dark:text-white/80 dark:hover:bg-white/[.08]">Export PDF</Button><Button onClick={() => window.print()} className="border-black/10 bg-white text-slate-700 hover:bg-black/5 dark:border-white/15 dark:bg-white/[.04] dark:text-white/80 dark:hover:bg-white/[.08]">Cetak</Button></div>
         </section>
       )}
 
@@ -474,7 +488,7 @@ function App() {
             <p className="mt-3 text-center text-sm font-semibold">Rp {Number(traktirAmount).toLocaleString("id-ID")}</p>
             <div className="mt-4 flex flex-wrap justify-center gap-2">
               <Button onClick={() => navigator.clipboard.writeText(traktirResult)} className="border-black/10 bg-white text-slate-700 hover:bg-black/5 dark:border-white/15 dark:bg-white/[.04] dark:text-white/80 dark:hover:bg-white/[.08]">Salin string</Button>
-              <Button asChild className="border-brand-600 bg-brand-600 text-white hover:bg-brand-700"><a download={`traktir-${Number(traktirAmount).toLocaleString("id-ID").replace(/\./g, "")}.png`} href={`/api/qr?data=${encodeURIComponent(traktirResult)}&size=560`}>Download QR</a></Button>
+              <Button onClick={() => downloadQrPng(traktirResult, `traktir-${Number(traktirAmount).toLocaleString("id-ID").replace(/\./g, "")}.png`)} className="border-brand-600 bg-brand-600 text-white hover:bg-brand-700">Download QR</Button>
             </div>
           </div>
         )}
