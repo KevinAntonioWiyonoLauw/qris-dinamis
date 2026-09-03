@@ -1,0 +1,4 @@
+DROP INDEX IF EXISTS idx_txn_ref;
+DROP TABLE IF EXISTS transactions;
+DROP TABLE IF EXISTS api_keys;
+DROP TABLE IF EXISTS admins;

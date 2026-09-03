@@ -1,0 +1,28 @@
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+
+# Local data
+/data/
+*.db
+*.db-shm
+*.db-wal
+
+# Build output (web/ is generated and intentionally tracked)
+*.exe
+*.test
+*.out
+
+# Frontend dependencies and logs
+frontend/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Editor and OS files
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
