@@ -414,10 +414,6 @@ function App() {
 
       {data && <div className="mt-4 space-y-4 print:hidden"><InfoCard data={data} /></div>}
 
-       <div className="mt-6 grid gap-4 lg:grid-cols-2 print:hidden">
-        {templates.length > 0 && <div className="space-y-4"><Templates onPick={pickTemplate} active={null} /></div>}
-      </div>
-
       {data && data.method === "static" && (
          <section className={`animate-enter rounded-2xl border border-black/10 bg-[#ffffff] p-5 text-slate-900 shadow-[0_18px_45px_rgb(23_23_23/0.06)] print:hidden dark:border-white/10 dark:bg-[#171717] dark:text-white`}>
            <div className="mb-5 flex items-center justify-between gap-3">
