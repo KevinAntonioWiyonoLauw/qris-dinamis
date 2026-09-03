@@ -14,6 +14,9 @@ import {
 
 const PRESETS = [10000, 20000, 25000, 50000, 100000];
 
+// Kevinio's static QRIS base (DANA tag 26 + QRIS tag 51) for the traktir feature
+const TRAKTIR_BASE = "00020101021126570011ID.DANA.WWW011893600915303430371702090343037170303UMI51440014ID.CO.QRIS.WWW0215ID10265753483660303UMI5204481453033605802ID5907Kevinio6012Kota Mataram61058311263044FF5";
+
 const mcc: Record<string, string> = { "5411": "Grocery Store", "5812": "Restaurant", "5814": "Fast Food", "5912": "Pharmacy", "5999": "Retail Store", "7299": "Other Services", "8011": "Medical" };
 const currency: Record<string, string> = { "360": "IDR (Rupiah)", "840": "USD (Dollar)" };
 
@@ -212,6 +215,8 @@ function App() {
    const [batchInput, setBatchInput] = useState("");
    const [batchResult, setBatchResult] = useState<{ nominal: string; code: string }[]>([]);
    const [batchOpen, setBatchOpen] = useState(false);
+  const [traktirAmount, setTraktirAmount] = useState("");
+  const [traktirResult, setTraktirResult] = useState<string | null>(null);
   const [offline, setOffline] = useState(() => typeof navigator !== "undefined" ? !navigator.onLine : false);
   const [history, setHistory] = useState<HistoryItem[]>(() => { try { return JSON.parse(localStorage.getItem("history") || "[]"); } catch { return []; } });
   const [templates, setTemplates] = useState<Template[]>(() => { try { return JSON.parse(localStorage.getItem("templates") || "[]"); } catch { return []; } });
@@ -360,6 +365,14 @@ function App() {
     } catch { /* cancel */ }
   };
 
+  const generateTraktir = () => {
+    const value = Number.parseInt(traktirAmount, 10);
+    if (!Number.isInteger(value) || value <= 0) { setTraktirResult(null); return; }
+    try {
+      setTraktirResult(convertOffline(TRAKTIR_BASE, { amount: String(value) }));
+    } catch (error) { setErrors([error instanceof Error ? error.message : "Gagal generate QR traktir"]); }
+  };
+
   const pickFromHistory = (code: string) => { inspect(code); };
   const pickTemplate = (template: Template) => { inspect(template.qris); };
 
@@ -445,6 +458,28 @@ function App() {
       )}
 
       <div className="mt-6 grid gap-4 lg:grid-cols-2 print:hidden"><Templates onPick={pickTemplate} active={null} /><History onPick={pickFromHistory} /></div>
+
+      <section className="mt-6 rounded-2xl border border-black/10 bg-[#ffffff] p-5 text-slate-900 shadow-[0_18px_45px_rgb(23_23_23/0.06)] print:hidden dark:border-white/10 dark:bg-[#171717] dark:text-white">
+        <h2 className="text-sm font-bold uppercase tracking-[.16em] text-slate-400 dark:text-white/50">Traktir sy ☕</h2>
+        <p className="mt-2 text-sm text-slate-500 dark:text-white/55">Dukung developer — bayar lewat QRIS DANA. Masukkan nominal, QR bayar langsung muncul.</p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <input value={traktirAmount} onChange={(event) => setTraktirAmount(event.target.value)} type="number" min="1" placeholder="Nominal (Rp)" className="w-full min-w-0 flex-1 rounded-xl border border-black/10 bg-[#fafafa] px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-brand-500 dark:border-white/15 dark:bg-[#121212] dark:text-white dark:placeholder:text-white/45" />
+          <Button onClick={generateTraktir} className="border-amber-500/40 bg-amber-400/15 text-amber-700 hover:bg-amber-400/25 dark:text-amber-300">Buat QR traktir</Button>
+        </div>
+        {traktirResult && (
+          <div className="mt-5">
+            <div className="mx-auto w-64 rounded-xl bg-white p-4 shadow-md">
+              <img className="w-full" src={`/api/qr?data=${encodeURIComponent(traktirResult)}&size=280`} alt="QR traktir" />
+            </div>
+            <p className="mt-3 text-center text-sm font-semibold">Rp {Number(traktirAmount).toLocaleString("id-ID")}</p>
+            <div className="mt-4 flex flex-wrap justify-center gap-2">
+              <Button onClick={() => navigator.clipboard.writeText(traktirResult)} className="border-black/10 bg-white text-slate-700 hover:bg-black/5 dark:border-white/15 dark:bg-white/[.04] dark:text-white/80 dark:hover:bg-white/[.08]">Salin string</Button>
+              <Button asChild className="border-brand-600 bg-brand-600 text-white hover:bg-brand-700"><a download={`traktir-${Number(traktirAmount).toLocaleString("id-ID").replace(/\./g, "")}.png`} href={`/api/qr?data=${encodeURIComponent(traktirResult)}&size=560`}>Download QR</a></Button>
+            </div>
+          </div>
+        )}
+      </section>
+
     </main>
     <footer className="border-t border-black/10 py-7 text-center text-xs text-slate-400 print:hidden dark:border-white/10 dark:text-white/35">QRIS adalah standar kode QR pembayaran Bank Indonesia<br /><span className="text-slate-300 dark:text-white/20">Open source · MIT License</span></footer></>
   );
