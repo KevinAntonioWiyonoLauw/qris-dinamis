@@ -471,7 +471,6 @@ function App() {
 
       <section className="mt-6 rounded-2xl border border-black/10 bg-[#ffffff] p-5 text-slate-900 shadow-[0_18px_45px_rgb(23_23_23/0.06)] print:hidden dark:border-white/10 dark:bg-[#171717] dark:text-white">
         <h2 className="text-sm font-bold uppercase tracking-[.16em] text-slate-400 dark:text-white/50">Beliin kopi dong bang ☕</h2>
-        <p className="mt-2 text-sm text-slate-500 dark:text-white/55">Dukung developer — bayar lewat QRIS DANA. Masukkan nominal, QR bayar langsung muncul.</p>
         <div className="mt-4 flex flex-wrap gap-2">
           <input value={traktirAmount} onChange={(event) => setTraktirAmount(event.target.value)} type="number" min="1" placeholder="Nominal (Rp)" className="w-full min-w-0 flex-1 rounded-xl border border-black/10 bg-[#fafafa] px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-brand-500 dark:border-white/15 dark:bg-[#121212] dark:text-white dark:placeholder:text-white/45" />
           <Button onClick={generateTraktir} className="border-brand-600 bg-brand-600 text-white hover:bg-brand-700">Buat QR traktir</Button>
