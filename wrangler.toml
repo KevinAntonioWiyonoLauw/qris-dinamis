@@ -1,5 +1,2 @@
 name = "qris-dinamis-go"
 compatibility_date = "2026-09-03"
-
-# Cloudflare Pages serves Vite output and auto-deploys functions/.
-pages_build_output_dir = "./frontend/dist"
