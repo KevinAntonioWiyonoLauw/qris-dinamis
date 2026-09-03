@@ -1,0 +1,8 @@
+{
+  "name": "qris-dinamis-go-functions",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "qrcode-generator": "^1.4.4"
+  }
+}
