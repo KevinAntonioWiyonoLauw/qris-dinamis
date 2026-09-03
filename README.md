@@ -1,56 +1,51 @@
 # QRIS Dinamis
 
-Open-source QRIS utility written in Go. Parse and validate QRIS strings, convert static QRIS into dynamic QRIS with a nominal and optional service fee, then generate a scannable QR image.
+Open-source QRIS utility. Parse and validate QRIS strings, convert static QRIS into dynamic QRIS with a nominal and optional service fee, then generate a scannable QR image.
 
-This project is a Go rewrite of [QRIS Dinamis](https://github.com/verssache/qris-dinamis), an MIT-licensed TypeScript project. Original copyright notice is retained in [LICENSE](LICENSE). Live demo: <https://qris.kevinio.my.id>.
+Live demo: <https://qris.kevinio.my.id>
 
-Web UI supports paste, upload, drag and drop, camera scanning, clipboard image scanning, light/dark mode, batch conversion, history, templates, CSV export, and offline conversion.
+Web UI supports paste, upload, camera scanning, clipboard image scanning, light/dark mode, batch conversion, history, templates, CSV export, and offline conversion.
 
 ## Features
 
 - QRIS TLV parsing and CRC16-CCITT validation
-- Static QRIS to dynamic QRIS conversion
+- Static QRIS to dynamic QRIS conversion (with CRC recompute)
 - Fixed or percentage service fee
-- Batch conversion with CSV and ZIP QR export
-- Local SQLite or Cloudflare D1 storage for admin transaction features
-- Single Go HTTP server with bundled Vite frontend
-- CLI and HTTP API
+- Batch conversion with CSV export
+- SVG QR generation
+- Offline mode via client-side engine (`frontend/src/lib/qris.ts`)
+- Cloudflare Pages deployment with Functions API
 
-## Requirements
+## Stack
 
-- Go 1.25+
-- Bun 1.3+, used for frontend install, development, and production build
+- React + TypeScript + Vite + Tailwind (frontend)
+- Bun (install, dev, build)
+- Cloudflare Pages Functions (`functions/`) for API routes
 
-## Quick start (local)
+## Development
 
 ```bash
 git clone https://github.com/KevinAntonioWiyonoLauw/qris-dinamis.git
-cd qris-dinamis
-cp .env.example .env
-go run ./cmd/qris-server
+cd qris-dinamis/frontend
+bun install
+bun run dev
 ```
 
-Open <http://localhost:8080>.
-
-Default storage is local SQLite at `data/qris.db`. Admin login stays disabled until `ADMIN_PASS` is set to a password with at least 8 characters.
-
-Never commit `.env`, database files, API tokens, or production credentials.
-
-## CLI
+Production build:
 
 ```bash
-go run ./cmd/qris-cli
+bun run build   # outputs frontend/dist
 ```
 
 ## Cloudflare Pages deployment
 
-Cloudflare Pages serves Vite output from `frontend/dist/` and deploys Functions in `functions/` on the same origin. The deployment includes QRIS API routes `/api/validate`, `/api/parse`, `/api/convert`, and `/api/qr` (SVG QR generation). Conversion also works offline in the browser.
+Pages serves Vite output from `frontend/dist/` and deploys Functions in `functions/` on the same origin. API routes: `/api/validate`, `/api/parse`, `/api/convert`, `/api/qr` (SVG). Conversion also works fully offline in the browser.
 
 Requirements: a Cloudflare account, Wrangler authentication, and Bun.
 
 ```bash
-bun install --cwd frontend
-bun run --cwd frontend build
+bun install            # install root deps (functions)
+cd frontend && bun install && bun run build
 bunx wrangler login
 bunx wrangler pages deploy frontend/dist --project-name qris-dinamis-go
 ```
@@ -63,50 +58,7 @@ Build command: bun install && cd frontend && bun install && bun run build
 Build output directory: frontend/dist
 ```
 
-`wrangler.toml` is included for the Pages project name and compatibility date. No API token belongs in this file. Add production secrets in Cloudflare dashboard environment settings.
-
-The Go-only routes (PDF/ZIP generation, admin transaction storage) are not part of the Pages Functions deployment — they require the self-hosted Go server. `/api/pdf`, `/api/batch-zip`, and `/api/batch-csv` are Go-only.
-
-## Frontend development
-
-```bash
-cd frontend
-bun install
-bun run dev
-```
-
-Production build writes generated assets to `frontend/dist/`:
-
-```bash
-bun run build
-```
-
-The optional Go server serves files from `WEB_DIR`, defaulting to `frontend/dist`, then falls back to legacy `web` paths. Go remains backend/API only; Vite owns frontend development and production assets.
-
-## Tests
-
-```bash
-go test ./...
-```
-
-Core parity tests use `internal/qris/testdata/fixtures.json` to compare parsing, validation, and conversion output with the reference implementation.
-
-## Configuration
-
-Copy `.env.example` to `.env`. Important settings:
-
-| Variable | Purpose | Default |
-|---|---|---|
-| `PORT` | HTTP port | `8080` |
-| `STORAGE` | `sqlite` or `d1` | `sqlite` |
-| `DATABASE_URL` | SQLite path or database URL | `data/qris.db` |
-| `DATA_DIR` | Local data directory | `data` |
-| `MIGRATIONS_DIR` | SQL migrations directory | `migrations` |
-| `WEB_DIR` | Built frontend directory for optional Go server | `web` |
-| `ADMIN_USER` | Admin username | `admin` |
-| `ADMIN_PASS` | Admin password; min. 8 characters | empty |
-
-Cloudflare D1 settings apply to the Go server deployment. Pages Functions currently do not require D1 for QRIS conversion.
+`wrangler.toml` holds the Pages project name and compatibility date. No API token belongs in this file. Add secrets in Cloudflare dashboard environment settings.
 
 ## API
 
@@ -116,40 +68,13 @@ Cloudflare D1 settings apply to the Go server deployment. Pages Functions curren
 | `POST` | `/api/parse` | `{"qris":"..."}` → parsed QRIS data |
 | `POST` | `/api/convert` | `{"qris":"...","amount":"25000","fee":{"type":"fixed","value":1000}}` → dynamic QRIS |
 | `GET` | `/api/qr?data=<urlencoded>&size=280` | SVG QR image |
-| `POST` | `/api/pdf` | `{"qris":"..."}` → PDF (Go server only) |
-| `POST` | `/api/batch-zip` | `{"qris":"...","items":[...]}` → ZIP of QR images (Go server only) |
-| `POST` | `/api/batch-csv` | CSV batch (Go server only) |
-
-Cloudflare Pages Functions:
-
-| Method | Path | Status |
-|---|---|---|
-| `POST` | `/api/validate` | Available on Pages |
-| `POST` | `/api/parse` | Available on Pages |
-| `POST` | `/api/convert` | Available on Pages |
-| `GET` | `/api/qr` | Available on Pages (SVG) |
-
-## Migrations
-
-Migration files use paired names such as:
-
-```text
-000001_initial.up.sql
-000001_initial.down.sql
-```
-
-The server applies unapplied `.up.sql` files in filename order. `.down.sql` files are rollback scripts and are not run automatically.
 
 ## Project layout
 
 ```text
-internal/qris/       QRIS parser, validator, converter, and tests
-cmd/qris-cli/         Interactive CLI
-cmd/qris-server/      HTTP server, API, storage, and migrations
-frontend/             Vite + React + Tailwind source and build output
-functions/             Cloudflare Pages API Functions
-web/                  Optional legacy Go-server build output
-migrations/           SQL migrations
+frontend/src/lib/qris.ts   QRIS parse/validate/convert engine (shared by UI and Functions)
+frontend/                  Vite + React + Tailwind source
+functions/                 Cloudflare Pages API Functions
 ```
 
 ## Security
