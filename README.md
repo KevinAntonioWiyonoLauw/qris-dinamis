@@ -21,7 +21,7 @@ Web UI supports paste, upload, drag and drop, camera scanning, clipboard image s
 - Go 1.25+
 - Node.js 20+ and npm, only needed when rebuilding frontend assets
 
-## Quick start
+## Quick start (local)
 
 ```bash
 git clone https://github.com/KevinAntonioWiyonoLauw/qris-dinamis-go.git
@@ -41,6 +41,31 @@ Never commit `.env`, database files, API tokens, or production credentials.
 ```bash
 go run ./cmd/qris-cli
 ```
+
+## Cloudflare Pages deployment
+
+Cloudflare Pages serves `web/` and deploys the Functions in `functions/` on the same origin. The Cloudflare deployment includes the QRIS API used by the web converter: `/api/validate`, `/api/parse`, and `/api/convert`. Conversion also works offline in the browser.
+
+Requirements: a Cloudflare account and Wrangler authentication.
+
+```bash
+npm install --prefix frontend
+npm run build --prefix frontend
+npx wrangler login
+npx wrangler pages deploy web --project-name qris-dinamis-go
+```
+
+For Git-connected deploys, set these Cloudflare Pages build settings:
+
+```text
+Root directory: /
+Build command: cd frontend && npm install && npm run build
+Build output directory: web
+```
+
+`wrangler.toml` is included for the Pages output directory. No API token belongs in this file. Add production secrets in Cloudflare dashboard environment settings.
+
+The original Go server remains available for self-hosting and for features that need Go libraries or persistent server storage, such as PDF/ZIP generation and admin transaction storage. Those Go-only routes are not part of the Pages Functions deployment.
 
 ## Frontend development
 
@@ -81,7 +106,7 @@ Copy `.env.example` to `.env`. Important settings:
 | `ADMIN_USER` | Admin username | `admin` |
 | `ADMIN_PASS` | Admin password; min. 8 characters | empty |
 
-Cloudflare D1 additionally needs `D1_ACCOUNT_ID`, `D1_DATABASE_ID`, and `CLOUDFLARE_API_TOKEN`, with `STORAGE=d1`.
+Cloudflare D1 settings apply to the Go server deployment. Pages Functions currently do not require D1 for QRIS conversion.
 
 ## API
 
@@ -90,7 +115,15 @@ Cloudflare D1 additionally needs `D1_ACCOUNT_ID`, `D1_DATABASE_ID`, and `CLOUDFL
 | `POST` | `/api/validate` | `{"qris":"..."}` → validation result |
 | `POST` | `/api/parse` | `{"qris":"..."}` → parsed QRIS data |
 | `POST` | `/api/convert` | `{"qris":"...","amount":"25000","fee":{"type":"fixed","value":1000}}` → dynamic QRIS |
-| `GET` | `/api/qr?data=<urlencoded>&size=280` | PNG QR image |
+| `GET` | `/api/qr?data=<urlencoded>&size=280` | PNG QR image (Go server) |
+
+Cloudflare Pages Functions:
+
+| Method | Path | Status |
+|---|---|---|
+| `POST` | `/api/validate` | Available on Pages |
+| `POST` | `/api/parse` | Available on Pages |
+| `POST` | `/api/convert` | Available on Pages |
 
 ## Migrations
 
