@@ -386,7 +386,16 @@ function App() {
         </section>
       )}
 
-       {data && data.method !== "static" && <div className="mt-6 rounded-2xl border border-slate-500/25 bg-slate-500/10 p-5 text-sm text-slate-500 print:hidden dark:text-slate-200">QRIS ini sudah dinamis dengan nominal Rp {Number(data.amount || 0).toLocaleString("id-ID")}.</div>}
+       {data && data.method !== "static" && (
+        <div className="mt-6 rounded-2xl border border-slate-500/25 bg-slate-500/10 p-5 text-sm text-slate-500 print:hidden dark:bg-slate-500/10 dark:text-slate-200">
+          <p>QRIS ini sudah dinamis dengan nominal Rp {Number(data.amount || 0).toLocaleString("id-ID")}.</p>
+          {qris.trim() && (
+            <div className="mx-auto my-5 w-72 rounded-xl bg-white p-4 shadow-md">
+              <img className="w-full" src={`/api/qr?data=${encodeURIComponent(qris.trim())}&size=280`} alt="QRIS dinamis" />
+            </div>
+          )}
+        </div>
+      )}
 
        {data && data.method === "static" && batchOpen && (
          <section className="mt-6 rounded-2xl border border-black/10 bg-[#ffffff] p-5 text-slate-900 shadow-[0_18px_45px_rgb(23_23_23/0.06)] print:hidden dark:border-white/10 dark:bg-[#171717] dark:text-white">
