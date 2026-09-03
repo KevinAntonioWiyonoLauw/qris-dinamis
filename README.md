@@ -2,7 +2,7 @@
 
 Open-source QRIS utility written in Go. Parse and validate QRIS strings, convert static QRIS into dynamic QRIS with a nominal and optional service fee, then generate a scannable QR image.
 
-This project is a Go rewrite of [QRIS Dinamis](https://github.com/verssache/qris-dinamis), an MIT-licensed TypeScript project. Original copyright notice is retained in [LICENSE](LICENSE).
+This project is a Go rewrite of [QRIS Dinamis](https://github.com/verssache/qris-dinamis), an MIT-licensed TypeScript project. Original copyright notice is retained in [LICENSE](LICENSE). Live demo: <https://qris.kevinio.my.id>.
 
 Web UI supports paste, upload, drag and drop, camera scanning, clipboard image scanning, light/dark mode, batch conversion, history, templates, CSV export, and offline conversion.
 
@@ -24,8 +24,8 @@ Web UI supports paste, upload, drag and drop, camera scanning, clipboard image s
 ## Quick start (local)
 
 ```bash
-git clone https://github.com/KevinAntonioWiyonoLauw/qris-dinamis-go.git
-cd qris-dinamis-go
+git clone https://github.com/KevinAntonioWiyonoLauw/qris-dinamis.git
+cd qris-dinamis
 cp .env.example .env
 go run ./cmd/qris-server
 ```
@@ -44,7 +44,7 @@ go run ./cmd/qris-cli
 
 ## Cloudflare Pages deployment
 
-Cloudflare Pages serves Vite output from `frontend/dist/` and deploys Functions in `functions/` on the same origin. The deployment includes QRIS API routes `/api/validate`, `/api/parse`, and `/api/convert`. Conversion also works offline in the browser.
+Cloudflare Pages serves Vite output from `frontend/dist/` and deploys Functions in `functions/` on the same origin. The deployment includes QRIS API routes `/api/validate`, `/api/parse`, `/api/convert`, and `/api/qr` (SVG QR generation). Conversion also works offline in the browser.
 
 Requirements: a Cloudflare account, Wrangler authentication, and Bun.
 
@@ -55,17 +55,17 @@ bunx wrangler login
 bunx wrangler pages deploy frontend/dist --project-name qris-dinamis-go
 ```
 
-For Git-connected deploys, set these Cloudflare Pages build settings:
+For Git-connected deploys, the build configuration lives in the Cloudflare Pages dashboard settings (project qris-dinamis-go):
 
 ```text
 Root directory: /
-Build command: cd frontend && bun install --frozen-lockfile && bun run build
+Build command: bun install && cd frontend && bun install && bun run build
 Build output directory: frontend/dist
 ```
 
-`wrangler.toml` is included for the Pages output directory. No API token belongs in this file. Add production secrets in Cloudflare dashboard environment settings.
+`wrangler.toml` is included for the Pages project name and compatibility date. No API token belongs in this file. Add production secrets in Cloudflare dashboard environment settings.
 
-The original Go server remains available for self-hosting and for features that need Go libraries or persistent server storage, such as PDF/ZIP generation and admin transaction storage. Those Go-only routes are not part of the Pages Functions deployment.
+The Go-only routes (PDF/ZIP generation, admin transaction storage) are not part of the Pages Functions deployment — they require the self-hosted Go server. `/api/pdf`, `/api/batch-zip`, and `/api/batch-csv` are Go-only.
 
 ## Frontend development
 
@@ -115,7 +115,10 @@ Cloudflare D1 settings apply to the Go server deployment. Pages Functions curren
 | `POST` | `/api/validate` | `{"qris":"..."}` → validation result |
 | `POST` | `/api/parse` | `{"qris":"..."}` → parsed QRIS data |
 | `POST` | `/api/convert` | `{"qris":"...","amount":"25000","fee":{"type":"fixed","value":1000}}` → dynamic QRIS |
-| `GET` | `/api/qr?data=<urlencoded>&size=280` | PNG QR image (Go server) |
+| `GET` | `/api/qr?data=<urlencoded>&size=280` | SVG QR image |
+| `POST` | `/api/pdf` | `{"qris":"..."}` → PDF (Go server only) |
+| `POST` | `/api/batch-zip` | `{"qris":"...","items":[...]}` → ZIP of QR images (Go server only) |
+| `POST` | `/api/batch-csv` | CSV batch (Go server only) |
 
 Cloudflare Pages Functions:
 
@@ -124,6 +127,7 @@ Cloudflare Pages Functions:
 | `POST` | `/api/validate` | Available on Pages |
 | `POST` | `/api/parse` | Available on Pages |
 | `POST` | `/api/convert` | Available on Pages |
+| `GET` | `/api/qr` | Available on Pages (SVG) |
 
 ## Migrations
 
