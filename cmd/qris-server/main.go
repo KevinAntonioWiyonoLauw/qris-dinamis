@@ -230,11 +230,14 @@ func main() {
 
 	webDir := os.Getenv("WEB_DIR")
 	if webDir == "" {
-		webDir = "web"
+		webDir = "frontend/dist"
 		if _, err := os.Stat(webDir + "/index.html"); err != nil {
-			webDir = "../web"
+			webDir = "web"
 			if _, err := os.Stat(webDir + "/index.html"); err != nil {
-				webDir = "../../web"
+				webDir = "../web"
+				if _, err := os.Stat(webDir + "/index.html"); err != nil {
+					webDir = "../../web"
+				}
 			}
 		}
 	}

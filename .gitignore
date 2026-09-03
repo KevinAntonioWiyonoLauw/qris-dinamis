@@ -9,7 +9,8 @@
 *.db-shm
 *.db-wal
 
-# Build output (web/ is generated and intentionally tracked)
+# Build output
+frontend/dist/
 *.exe
 *.test
 *.out
@@ -19,6 +20,7 @@
 
 # Frontend dependencies and logs
 frontend/node_modules/
+bun.lockb
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*

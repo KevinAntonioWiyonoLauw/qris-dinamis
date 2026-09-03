@@ -19,7 +19,7 @@ Web UI supports paste, upload, drag and drop, camera scanning, clipboard image s
 ## Requirements
 
 - Go 1.25+
-- Node.js 20+ and npm, only needed when rebuilding frontend assets
+- Bun 1.3+, used for frontend install, development, and production build
 
 ## Quick start (local)
 
@@ -44,23 +44,23 @@ go run ./cmd/qris-cli
 
 ## Cloudflare Pages deployment
 
-Cloudflare Pages serves `web/` and deploys the Functions in `functions/` on the same origin. The Cloudflare deployment includes the QRIS API used by the web converter: `/api/validate`, `/api/parse`, and `/api/convert`. Conversion also works offline in the browser.
+Cloudflare Pages serves Vite output from `frontend/dist/` and deploys Functions in `functions/` on the same origin. The deployment includes QRIS API routes `/api/validate`, `/api/parse`, and `/api/convert`. Conversion also works offline in the browser.
 
-Requirements: a Cloudflare account and Wrangler authentication.
+Requirements: a Cloudflare account, Wrangler authentication, and Bun.
 
 ```bash
-npm install --prefix frontend
-npm run build --prefix frontend
-npx wrangler login
-npx wrangler pages deploy web --project-name qris-dinamis-go
+bun install --cwd frontend
+bun run --cwd frontend build
+bunx wrangler login
+bunx wrangler pages deploy frontend/dist --project-name qris-dinamis-go
 ```
 
 For Git-connected deploys, set these Cloudflare Pages build settings:
 
 ```text
 Root directory: /
-Build command: cd frontend && npm install && npm run build
-Build output directory: web
+Build command: cd frontend && bun install --frozen-lockfile && bun run build
+Build output directory: frontend/dist
 ```
 
 `wrangler.toml` is included for the Pages output directory. No API token belongs in this file. Add production secrets in Cloudflare dashboard environment settings.
@@ -71,17 +71,17 @@ The original Go server remains available for self-hosting and for features that 
 
 ```bash
 cd frontend
-npm install
-npm run dev
+bun install
+bun run dev
 ```
 
-Production build writes generated assets to `web/`:
+Production build writes generated assets to `frontend/dist/`:
 
 ```bash
-npm run build
+bun run build
 ```
 
-The Go server serves files from `WEB_DIR`, defaulting to `web`.
+The optional Go server serves files from `WEB_DIR`, defaulting to `frontend/dist`, then falls back to legacy `web` paths. Go remains backend/API only; Vite owns frontend development and production assets.
 
 ## Tests
 
@@ -102,7 +102,7 @@ Copy `.env.example` to `.env`. Important settings:
 | `DATABASE_URL` | SQLite path or database URL | `data/qris.db` |
 | `DATA_DIR` | Local data directory | `data` |
 | `MIGRATIONS_DIR` | SQL migrations directory | `migrations` |
-| `WEB_DIR` | Built frontend directory | `web` |
+| `WEB_DIR` | Built frontend directory for optional Go server | `web` |
 | `ADMIN_USER` | Admin username | `admin` |
 | `ADMIN_PASS` | Admin password; min. 8 characters | empty |
 
@@ -142,8 +142,9 @@ The server applies unapplied `.up.sql` files in filename order. `.down.sql` file
 internal/qris/       QRIS parser, validator, converter, and tests
 cmd/qris-cli/         Interactive CLI
 cmd/qris-server/      HTTP server, API, storage, and migrations
-frontend/             React + Tailwind source
-web/                  Generated frontend assets served by Go
+frontend/             Vite + React + Tailwind source and build output
+functions/             Cloudflare Pages API Functions
+web/                  Optional legacy Go-server build output
 migrations/           SQL migrations
 ```
 
