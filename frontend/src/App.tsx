@@ -330,11 +330,33 @@ function App() {
 
   const share = async () => {
     if (!result) return;
-    const payload = { title: "QRIS Dinamis", text: `QRIS ${result.data.merchantName} Rp ${Number(result.data.amount || 0).toLocaleString("id-ID")}`, url: `${location.origin}/api/qr?data=${encodeURIComponent(result.code)}&size=280` };
+    const qrUrl = `${location.origin}/api/qr?data=${encodeURIComponent(result.code)}&size=280`;
+    const text = `QRIS ${result.data.merchantName} Rp ${Number(result.data.amount || 0).toLocaleString("id-ID")}\nCek di page: ${location.origin}`;
+    const attachImage = async () => {
+      // fetch SVG QR, rasterize to PNG via canvas so WhatsApp accepts it as an image
+      const svgText = await (await fetch(qrUrl)).text();
+      const img = new Image();
+      const url = URL.createObjectURL(new Blob([svgText], { type: "image/svg+xml" }));
+      await new Promise<void>((resolve, reject) => { img.onload = () => resolve(); img.onerror = () => reject(new Error("svg load failed")); img.src = url; });
+      const canvas = document.createElement("canvas");
+      const size = 560;
+      canvas.width = size; canvas.height = size;
+      const ctx = canvas.getContext("2d");
+      ctx?.drawImage(img, 0, 0, size, size);
+      URL.revokeObjectURL(url);
+      const png = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
+      return new File([png ?? new Blob()], "qris.png", { type: "image/png" });
+    };
     try {
-      if (navigator.share) { await navigator.share(payload); return; }
-      await navigator.clipboard.writeText(result.code);
-      alert("String QRIS disalin ke clipboard.");
+      // try sharing with image attached (WhatsApp/Android share sheets)
+      const file = await attachImage();
+      const payload = { title: "QRIS Dinamis", text, files: [file] };
+      if ((navigator as any).canShare?.(payload)) { await navigator.share(payload); return; }
+    } catch { /* image share unsupported → fall back below */ }
+    try {
+      if (navigator.share) { await navigator.share({ title: "QRIS Dinamis", text }); return; }
+      await navigator.clipboard.writeText(text);
+      alert("QRIS disalin ke clipboard.");
     } catch { /* cancel */ }
   };
 
