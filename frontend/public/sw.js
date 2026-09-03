@@ -1,4 +1,4 @@
-const CACHE = "qris-dinamis-v1";
+const CACHE = "qris-dinamis-v2";
 const CORE_ASSETS = ["/", "/index.html"];
 
 self.addEventListener("install", (event) => {
@@ -14,6 +14,21 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   if (request.method !== "GET" || request.url.includes("/api/")) return;
+  // navigations: network-first so fresh index.html (new JS bundles) is served after deploys
+  if (request.mode === "navigate") {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (response.status === 200) {
+            const clone = response.clone();
+            caches.open(CACHE).then((cache) => cache.put(request, clone));
+          }
+          return response;
+        })
+        .catch(() => caches.match(request).then((cached) => cached || caches.match("/index.html")))
+    );
+    return;
+  }
   event.respondWith(
     caches.match(request).then((cached) => {
       const network = fetch(request)
@@ -24,7 +39,7 @@ self.addEventListener("fetch", (event) => {
           }
           return response;
         })
-        .catch(() => cached || (request.mode === "navigate" ? caches.match("/index.html") : Response.error()));
+        .catch(() => cached || Response.error());
       return cached || network;
     })
   );
