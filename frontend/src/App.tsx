@@ -478,7 +478,7 @@ function App() {
         <p className="mt-2 text-sm text-slate-500 dark:text-white/55">Dukung developer — bayar lewat QRIS DANA. Masukkan nominal, QR bayar langsung muncul.</p>
         <div className="mt-4 flex flex-wrap gap-2">
           <input value={traktirAmount} onChange={(event) => setTraktirAmount(event.target.value)} type="number" min="1" placeholder="Nominal (Rp)" className="w-full min-w-0 flex-1 rounded-xl border border-black/10 bg-[#fafafa] px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-brand-500 dark:border-white/15 dark:bg-[#121212] dark:text-white dark:placeholder:text-white/45" />
-          <Button onClick={generateTraktir} className="border-amber-500/40 bg-amber-400/15 text-amber-700 hover:bg-amber-400/25 dark:text-amber-300">Buat QR traktir</Button>
+          <Button onClick={generateTraktir} className="border-brand-600 bg-brand-600 text-white hover:bg-brand-700">Buat QR traktir</Button>
         </div>
         {traktirResult && (
           <div className="mt-5">
